@@ -364,7 +364,7 @@ app.get("/healthz", (req, res) => {
   });
 });
 
-router.post("/manual", async (req, res) => {
+app.post("/manual", async (req, res) => {
   try {
     const {
       group_code,
