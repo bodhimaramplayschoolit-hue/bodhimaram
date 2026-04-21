@@ -364,6 +364,46 @@ app.get("/healthz", (req, res) => {
   });
 });
 
+router.post("/manual", async (req, res) => {
+  try {
+    const {
+      group_code,
+      student_id,
+      student_name,
+      amount,
+      payment_mode,
+      status,
+      notes,
+    } = req.body;
+
+    if (!group_code || !student_id || !amount) {
+      return res.status(400).json({ error: "Missing required fields" });
+    }
+
+    await db.query(
+      `
+      INSERT INTO transactions
+      (group_code, student_id, student_name, amount, payment_mode, status, notes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+      `,
+      [
+        group_code,
+        student_id,
+        student_name,
+        amount,
+        payment_mode || "Cash",
+        status || "Paid",
+        notes || null,
+      ]
+    );
+
+    res.json({ message: "Manual payment added" });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Failed to add payment" });
+  }
+});
 
 // ----------------------
 // Start Server
