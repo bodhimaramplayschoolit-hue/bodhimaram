@@ -147,11 +147,11 @@ app.post("/save-paymentlink", async (req, res) => {
       return res.status(400).send({ message: "Missing required fields" });
     }
 
-    const sql = `
-      INSERT INTO paylink
-      (student_name, class_name, amount, phone, upi_link, status, created_at, status_updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, NOW(), NOW())
-    `;
+   const sql = `
+INSERT INTO paylink
+(student_name, class_name, amount, phone, upi_link, status, payment_mode, description, created_at, status_updated_at)
+VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+`;
 
     await db.query(sql, [
       student.childname,   // student_name
@@ -160,6 +160,8 @@ app.post("/save-paymentlink", async (req, res) => {
       student.primary_no,  // phone
       upiLink,             // upi_link
       "Pending",           // status
+       "Online",      // ✅ NEW
+  null
     ]);
 
     res.status(200).send({ message: "Payment link saved successfully" });
@@ -367,41 +369,39 @@ app.get("/healthz", (req, res) => {
 app.post("/manual", async (req, res) => {
   try {
     const {
-      group_code,
-      student_id,
       student_name,
+      class_name,
       amount,
+      phone,
       payment_mode,
-      status,
-      notes,
+      description,
     } = req.body;
 
-    if (!group_code || !student_id || !amount) {
+    if (!student_name || !class_name || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     await db.query(
       `
-      INSERT INTO transactions
-      (group_code, student_id, student_name, amount, payment_mode, status, notes)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
+      INSERT INTO paylink
+      (student_name, class_name, amount, phone, status, payment_mode, description, created_at, status_updated_at)
+      VALUES (?, ?, ?, ?, 'Paid', ?, ?, NOW(), NOW())
       `,
       [
-        group_code,
-        student_id,
         student_name,
+        class_name,
         amount,
+        phone || null,
         payment_mode || "Cash",
-        status || "Paid",
-        notes || null,
+        description || null,
       ]
     );
 
-    res.json({ message: "Manual payment added" });
+    res.json({ message: "Manual payment recorded successfully" });
 
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: "Failed to add payment" });
+    res.status(500).json({ error: "Failed to save manual payment" });
   }
 });
 
