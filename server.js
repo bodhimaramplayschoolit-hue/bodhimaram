@@ -136,9 +136,43 @@ return res.json({
 
 
 
-// ----------------------
-// Save Payment Link
-// ----------------------
+// // ----------------------
+// // Save Payment Link
+// // ----------------------
+// app.post("/save-paymentlink", async (req, res) => {
+//   try {
+//     const { student, group, amount, upiLink } = req.body;
+
+//     if (!student || !group || !amount || !upiLink) {
+//       return res.status(400).send({ message: "Missing required fields" });
+//     }
+
+//    const sql = `
+// INSERT INTO paylink
+// (student_name, class_name, amount, phone, upi_link, status, payment_mode, description, created_at, status_updated_at)
+// VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+// `;
+
+//     await db.query(sql, [
+//       student.childname,   // student_name
+//       group,               // class_name
+//       amount,              // amount
+//       student.primary_no,  // phone
+//       upiLink,             // upi_link
+//       "Pending",           // status
+//        "Online",      // ✅ NEW
+//   null
+//     ]);
+
+//     res.status(200).send({ message: "Payment link saved successfully" });
+//   } catch (error) {
+//     console.error("Error saving payment link:", error);
+//     res.status(500).send({ message: "Error saving payment link" });
+//   }
+// });
+
+
+
 app.post("/save-paymentlink", async (req, res) => {
   try {
     const { student, group, amount, upiLink } = req.body;
@@ -147,26 +181,28 @@ app.post("/save-paymentlink", async (req, res) => {
       return res.status(400).send({ message: "Missing required fields" });
     }
 
-   const sql = `
-INSERT INTO paylink
-(student_name, class_name, amount, phone, upi_link, status, payment_mode, description, created_at, status_updated_at)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
-`;
+    const sql = `
+      INSERT INTO paylink
+      (student_id, student_name, class_name, amount, phone, upi_link, status, payment_mode, description, created_at, status_updated_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())
+    `;
 
     await db.query(sql, [
-      student.childname,   // student_name
-      group,               // class_name
-      amount,              // amount
-      student.primary_no,  // phone
-      upiLink,             // upi_link
-      "Pending",           // status
-       "Online",      // ✅ NEW
-  null
+      student.id,              // ✅ IMPORTANT
+      student.childname,
+      group,
+      amount,
+      student.primary_no,
+      upiLink,
+      "Pending",
+      "Online",
+      null
     ]);
 
     res.status(200).send({ message: "Payment link saved successfully" });
+
   } catch (error) {
-    console.error("Error saving payment link:", error);
+    console.error(error);
     res.status(500).send({ message: "Error saving payment link" });
   }
 });
@@ -272,22 +308,7 @@ app.get("/api/attendance/report/:studentId", async (req, res) => {
 });
 
 
-// // ================= GET ATTENDANCE BY DATE (KEEP AFTER) =================
-// app.get("/api/attendance/:groupCode/:date", async (req, res) => {
-//   const { groupCode, date } = req.params;
 
-//   try {
-//     const [rows] = await db.query(
-//       "SELECT student_id, status FROM attendance WHERE group_code = ? AND date = ?",
-//       [groupCode, date]
-//     );
-
-//     res.json(rows);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json([]);
-//   }
-// });
 
 
 
@@ -331,33 +352,6 @@ app.post("/api/attendance", async (req, res) => {
   }
 });
 
-
-// app.get("/api/attendance/report/:studentId", async (req, res) => {
-//   const { studentId } = req.params;
-
-//   try {
-//     const [rows] = await db.query(
-//       `
-//       SELECT
-//         YEAR(date) AS year,
-//         MONTH(date) AS month,
-//         COUNT(*) AS total_days,
-//         SUM(status = 'P') AS present_days,
-//         SUM(status = 'A') AS absent_days
-//       FROM attendance
-//       WHERE student_id = ?
-//       GROUP BY YEAR(date), MONTH(date)
-//       ORDER BY year DESC, month DESC
-//       `,
-//       [studentId]
-//     );
-
-//     res.json(rows);
-//   } catch (err) {
-//     console.error("STUDENT ATT REPORT ERROR:", err);
-//     res.status(500).json([]);
-//   }
-// });
 app.get("/healthz", (req, res) => {
   res.status(200).json({
     status: "ok",
@@ -365,10 +359,10 @@ app.get("/healthz", (req, res) => {
     timestamp: new Date(),
   });
 });
-
 app.post("/manual", async (req, res) => {
   try {
     const {
+      student_id,          // ✅ NEW
       student_name,
       class_name,
       amount,
@@ -377,17 +371,18 @@ app.post("/manual", async (req, res) => {
       description,
     } = req.body;
 
-    if (!student_name || !class_name || !amount) {
+    if (!student_id || !student_name || !class_name || !amount) {
       return res.status(400).json({ error: "Missing required fields" });
     }
 
     await db.query(
       `
       INSERT INTO paylink
-      (student_name, class_name, amount, phone, status, payment_mode, description, created_at, status_updated_at)
-      VALUES (?, ?, ?, ?, 'Paid', ?, ?, NOW(), NOW())
+      (student_id, student_name, class_name, amount, phone, status, payment_mode, description, created_at, status_updated_at)
+      VALUES (?, ?, ?, ?, ?, 'Paid', ?, ?, NOW(), NOW())
       `,
       [
+        student_id,         // ✅ IMPORTANT
         student_name,
         class_name,
         amount,
@@ -402,6 +397,53 @@ app.post("/manual", async (req, res) => {
   } catch (err) {
     console.error(err);
     res.status(500).json({ error: "Failed to save manual payment" });
+  }
+});
+
+app.get("/student-full/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // 1️⃣ Student details
+    const [student] = await db.query(
+      `SELECT * FROM students WHERE id = ?`,
+      [id]
+    );
+
+    if (!student.length) {
+      return res.status(404).json({ error: "Student not found" });
+    }
+
+    // 2️⃣ Payment history
+    const [payments] = await db.query(
+      `SELECT * FROM paylink 
+       WHERE student_id = ? 
+       ORDER BY created_at DESC`,
+      [id]
+    );
+
+    // 3️⃣ Total paid
+    const [paid] = await db.query(
+      `SELECT SUM(amount) as total_paid 
+       FROM paylink 
+       WHERE student_id = ? AND status = 'Paid'`,
+      [id]
+    );
+
+    const total_paid = paid[0].total_paid || 0;
+    const total_fees = student[0].total_fees || 0;
+    const balance = total_fees - total_paid;
+
+    res.json({
+      student: student[0],
+      payments,
+      total_paid,
+      balance,
+    });
+
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: "Server error" });
   }
 });
 
