@@ -26,9 +26,6 @@ const transporter = createTransport({
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS,
   },
-  connectionTimeout: 60000,
-  greetingTimeout: 60000,
-  socketTimeout: 60000,
 });
 
 transporter.verify((err, success) => {
@@ -375,7 +372,39 @@ router.post("/verify-otp", async (req, res) => {
   }
 });
 
+router.get("/test-mail", async (req, res) => {
+  try {
 
+    console.log("Testing Email...");
+
+    const info = await transporter.sendMail({
+      from: process.env.GMAIL_USER,
+      to: process.env.GMAIL_USER,
+      subject: "Test Email from Render",
+      text: "This is a test email sent from Render using Nodemailer.",
+    });
+
+    console.log("Email Sent Successfully");
+    console.log(info);
+
+    res.json({
+      success: true,
+      message: "Email sent successfully",
+      info,
+    });
+
+  } catch (err) {
+
+    console.error("TEST MAIL ERROR");
+    console.error(err);
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+      code: err.code,
+    });
+  }
+});
 // Reset password via phone OTP
 router.post("/reset-password-otp", async (req, res) => {
   const { phone, password } = req.body;
