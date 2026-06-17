@@ -29,59 +29,209 @@ const twilioClient = twilio(
 
 
 // ================= FORGOT PASSWORD =================
+
+// router.post("/forgot-password", async (req, res) => {
+//   const { option, value } = req.body;
+
+//   try {
+//     if (option === "email") {
+//       const [results] = await db
+        
+//         .query("SELECT * FROM users WHERE email = ?", [value]);
+//       if (results.length === 0)
+//         return res.status(404).json({ error: "Email not found" });
+
+//       const resetToken = Math.random().toString(36).substring(2, 12);
+
+//       // Set expiry 10 minutes from now
+//       const expiryTime = new Date(Date.now() + 10 * 60 * 1000); // 10 min
+//       const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+
+//       // Update token and expiry in DB
+//       await db
+//         .query(
+//           "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?",
+//           [resetToken, expiryTime, value]
+//         );
+
+//       // Send email with expiry info
+//       const mailOptions = {
+//         from: process.env.GMAIL_USER,
+//         to: value,
+//         subject: "Password Reset Request",
+//         html: `
+//           <div style="font-family: Arial, sans-serif; max-width:600px; margin:auto; padding:20px; border:1px solid #ddd; border-radius:10px;">
+//             <h2>Password Reset Request</h2>
+//             <p>You requested a password reset. Click the button below:</p>
+//             <p style="text-align:center; margin:30px 0;">
+//               <a href="${resetLink}" style="background:#007bff; color:white; padding:10px 20px; border-radius:5px; text-decoration:none;">
+//                 Reset Password
+//               </a>
+//             </p>
+//             <p>If the button doesn’t work, copy this link:</p>
+//             <p style="word-break: break-all;">${resetLink}</p>
+//             <p style="color:#888; font-size:12px;">This link is valid for 10 minutes only.</p>
+//           </div>
+//         `,
+//       };
+
+//       transporter.sendMail(mailOptions, (error) => {
+//         if (error) {
+//           console.error("Email error:", error);
+//           return res.status(500).json({ error: "Email not sent" });
+//         }
+//         res.json({ message: "Reset link sent to email" });
+//       });
+//     }
+
+//     // Phone OTP
+//     // Phone OTP
+// else if (option === "phone") {
+//   const [results] = await db
+    
+//     .query("SELECT * FROM users WHERE phone = ?", [value]);
+  
+//   if (results.length === 0)
+//     return res.status(404).json({ error: "Phone not found" });
+
+//   // Format number to E.164 if not already
+//   let phoneNumber = value.startsWith("+") ? value : `+91${value}`; // assuming India, change country code if needed
+
+//   const otp = Math.floor(1000 + Math.random() * 9000);
+//   const expiryTime = new Date(Date.now() + 5 * 60 * 1000); // 5 min expiry
+
+//   await db
+    
+//     .query("UPDATE users SET otp = ?, otp_expiry = ? WHERE phone = ?", [
+//       otp,
+//       expiryTime,
+//       value,
+//     ]);
+
+//   try {
+//     await twilioClient.messages.create({
+//       body: `Your OTP is ${otp}`,
+//       from: process.env.TWILIO_PHONE,
+//       to: phoneNumber,
+//     });
+
+//     res.json({ message: "OTP sent to your phone" });
+//   } catch (err) {
+//     console.error("Twilio OTP error:", err);
+//     if (err.code === 21408) {
+//       return res.status(400).json({ 
+//         error: "Cannot send SMS to this number. Check Twilio region permissions or verify the number." 
+//       });
+//     } else {
+//       return res.status(500).json({ error: "Failed to send OTP. Try again later." });
+//     }
+//   }
+// }
+// else {
+//       res.status(400).json({ error: "Invalid option" });
+//     }
+//   } catch (err) {
+//     console.error(err);
+//     res.status(500).json({ error: "Server error" });
+//   }
+// });
+
 router.post("/forgot-password", async (req, res) => {
   const { option, value } = req.body;
 
   try {
-    if (option === "email") {
-      const [results] = await db
-        
-        .query("SELECT * FROM users WHERE email = ?", [value]);
-      if (results.length === 0)
-        return res.status(404).json({ error: "Email not found" });
+ if (option === "email") {
 
-      const resetToken = Math.random().toString(36).substring(2, 12);
+  console.log("====================================");
+  console.log("FORGOT PASSWORD REQUEST STARTED");
+  console.log("Option:", option);
+  console.log("Value:", value);
+  console.log("====================================");
 
-      // Set expiry 10 minutes from now
-      const expiryTime = new Date(Date.now() + 10 * 60 * 1000); // 10 min
-      const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+  const [results] = await db.query(
+    "SELECT * FROM users WHERE email = ?",
+    [value]
+  );
 
-      // Update token and expiry in DB
-      await db
-        .query(
-          "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?",
-          [resetToken, expiryTime, value]
-        );
+  console.log("1. SELECT Query Executed");
+  console.log("2. Results Length:", results.length);
+  console.log("3. Results:", results);
 
-      // Send email with expiry info
-      const mailOptions = {
-        from: process.env.GMAIL_USER,
-        to: value,
-        subject: "Password Reset Request",
-        html: `
-          <div style="font-family: Arial, sans-serif; max-width:600px; margin:auto; padding:20px; border:1px solid #ddd; border-radius:10px;">
-            <h2>Password Reset Request</h2>
-            <p>You requested a password reset. Click the button below:</p>
-            <p style="text-align:center; margin:30px 0;">
-              <a href="${resetLink}" style="background:#007bff; color:white; padding:10px 20px; border-radius:5px; text-decoration:none;">
-                Reset Password
-              </a>
-            </p>
-            <p>If the button doesn’t work, copy this link:</p>
-            <p style="word-break: break-all;">${resetLink}</p>
-            <p style="color:#888; font-size:12px;">This link is valid for 10 minutes only.</p>
-          </div>
-        `,
-      };
+  if (results.length === 0) {
+    console.log("❌ Email not found in database");
+    return res.status(404).json({ error: "Email not found" });
+  }
 
-      transporter.sendMail(mailOptions, (error) => {
-        if (error) {
-          console.error("Email error:", error);
-          return res.status(500).json({ error: "Email not sent" });
-        }
-        res.json({ message: "Reset link sent to email" });
+  console.log("✅ Email found");
+
+  const resetToken = Math.random().toString(36).substring(2, 12);
+
+  console.log("4. Reset Token Generated:", resetToken);
+
+  const expiryTime = new Date(Date.now() + 10 * 60 * 1000);
+
+  console.log("5. Expiry Time:", expiryTime);
+
+  const resetLink = `http://localhost:3000/reset-password/${resetToken}`;
+
+  console.log("6. Reset Link:", resetLink);
+
+  await db.query(
+    "UPDATE users SET reset_token = ?, reset_token_expiry = ? WHERE email = ?",
+    [resetToken, expiryTime, value]
+  );
+
+  console.log("✅ Database Updated Successfully");
+
+  console.log("GMAIL_USER:", process.env.GMAIL_USER);
+  console.log("GMAIL_PASS EXISTS:", !!process.env.GMAIL_PASS);
+
+  const mailOptions = {
+    from: process.env.GMAIL_USER,
+    to: value,
+    subject: "Password Reset Request",
+    html: `
+      <h2>Password Reset Request</h2>
+      <p>Click below link:</p>
+      <a href="${resetLink}">Reset Password</a>
+    `,
+  };
+
+  console.log("7. Mail Options Created");
+  console.log("To:", value);
+
+  transporter.verify((error, success) => {
+    if (error) {
+      console.log("❌ SMTP VERIFY ERROR");
+      console.error(error);
+    } else {
+      console.log("✅ SMTP READY");
+      console.log(success);
+    }
+  });
+
+  console.log("8. About To Send Email");
+
+  transporter.sendMail(mailOptions, (error, info) => {
+
+    if (error) {
+      console.log("❌ EMAIL SEND FAILED");
+      console.error("Email Error:", error);
+
+      return res.status(500).json({
+        error: "Email not sent",
+        details: error.message,
       });
     }
+
+    console.log("✅ EMAIL SENT SUCCESSFULLY");
+    console.log("Info:", info);
+
+    res.json({
+      message: "Reset link sent to email",
+    });
+  });
+}
 
     // Phone OTP
     // Phone OTP
@@ -134,6 +284,8 @@ else {
     res.status(500).json({ error: "Server error" });
   }
 });
+
+
 
 // ================= RESET PASSWORD =================
 router.post("/reset-password", async (req, res) => {
