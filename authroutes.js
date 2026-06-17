@@ -8,17 +8,37 @@ const router = Router();
 dotenv.config();
 // === Email Transporter Setup ===
 
+// const transporter = createTransport({
+//   service: "gmail",
+//   auth: {
+//     user: process.env.GMAIL_USER,
+//     pass: process.env.GMAIL_PASS,
+//   },
+//   tls: {
+//     rejectUnauthorized: false,
+//   },
+// });
+
 const transporter = createTransport({
-  service: "gmail",
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
   auth: {
     user: process.env.GMAIL_USER,
     pass: process.env.GMAIL_PASS,
   },
-  tls: {
-    rejectUnauthorized: false,
-  },
+  connectionTimeout: 30000,
+  greetingTimeout: 30000,
+  socketTimeout: 30000,
 });
 
+transporter.verify((err, success) => {
+  if (err) {
+    console.error("SMTP VERIFY ERROR:", err);
+  } else {
+    console.log("SMTP READY");
+  }
+});
 
 // === Twilio Setup ===
 const twilioClient = twilio(
